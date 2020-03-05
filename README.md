@@ -36,7 +36,7 @@
 
 #### 自动化流程
 
-编写项目代码 => 编写.drone.yml(使用工具生成模板并修改) => 编写Dockerfile(使用工具生成模板并修改) => 编写auto.toml配置特殊启动参数 => 上传到git仓库 => drone平台进行持续集成并上传到docker registry（失败发送邮件） 
+编写项目代码 => 编写.drone.yml(使用工具生成模板并修改,服务端会为drone提供默认配置文件，即可以不写) => 编写Dockerfile(使用工具生成模板并修改) => 编写auto.toml配置特殊启动参数 => 上传到git仓库 => drone平台进行持续集成并上传到docker registry（失败发送邮件） 
 => auto-server捕获到成功通知并根据Dockerfile及auto.toml进行部署（此阶段可在客户端调用auto-client进行查看） => auto-server监测启动成功 => auto-server进行nginx相应自动更改 => 部署流程结束 => auto-server进行后续运行状态监控
 
 ### 手动

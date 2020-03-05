@@ -1,7 +1,14 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/kataras/iris"
+)
 
 func main() {
-	fmt.Println("server first line")
+	app := iris.New()
+
+	if err := app.Run(iris.Addr("0.0.0.0:3001")); err != nil {
+		panic(fmt.Errorf("服务器监听错误：%s", err))
+	}
 }
