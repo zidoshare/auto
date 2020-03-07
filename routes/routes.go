@@ -6,5 +6,5 @@ import (
 )
 
 func Routes(app *iris.Application) {
-	app.Get("/drone/config/java", drone.Configuration)
+	app.Get("/api/auto/drone/config", drone.Configuration)
 }

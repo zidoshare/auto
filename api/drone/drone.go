@@ -18,6 +18,7 @@ type droneExPlugin struct {
 }
 
 func (p *droneExPlugin) Find(ctx context.Context, req *config.Request) (*drone.Config, error) {
+	//根据项目空间、项目文件结构获取相应的默认配置文件
 	if req.Repo.Namespace == "hnqc" {
 		return &drone.Config{
 			Data: defaultPipeline,
