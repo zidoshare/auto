@@ -18,16 +18,19 @@ type AutoConfig struct {
 }
 
 type ServerConfig struct {
-	Port  uint `toml:"port" short:"p" long:"server-port" description:"服务器绑定端口" value-name:"port"`
-	Debug bool `toml:"debug" short:"d" long:"server-debug" description:"是否开启debug模式" value-name:"debug"`
+	Port  string `toml:"port" short:"p" long:"server-port" description:"服务器绑定端口" value-name:"port"`
+	Debug bool   `toml:"debug" short:"d" long:"server-debug" description:"是否开启debug模式" value-name:"debug"`
 }
 
 type DroneConfig struct {
 	Secret string `toml:"secret" long:"drone-secret" description:"drone服务器api secret" value-name:"secret"`
+	YmlDir string `toml:"yml_dir" long:"drone-yml-dir" description:"drone服务器所需要的默认配置文件所在位置" value-name:"dir"`
 }
 
 type GitlabConfig struct {
-	AccessToken string `toml:"access_token" long:"gitlab-access-token" description:"gitlab服务器accessToken" value-name:"<token>"`
+	Host        string   `toml:"host" long:"gitlab-host" description:"gitlab基本路径" value-name:"host"`
+	AccessToken string   `toml:"access_token" long:"gitlab-access-token" description:"gitlab服务器accessToken" value-name:"<token>"`
+	Namespace   []string `toml:"namespace" long:"gitlab-namespace" description:"gitlab服务器对应的namespace空间" value-name:"namespace"`
 }
 
 var (
@@ -69,7 +72,7 @@ func Config() *AutoConfig {
 		info, err := os.Stat(path)
 		cfg = &AutoConfig{
 			Server: ServerConfig{
-				Port: 8002,
+				Port: ":8002",
 			},
 		}
 		if !os.IsNotExist(err) {

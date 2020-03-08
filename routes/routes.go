@@ -1,8 +1,8 @@
 package routes
 
 import (
+	"auto/drone"
 	"github.com/kataras/iris"
-	"gitlab.scustartup.com/hnqc/auto/api/drone"
 )
 
 func Routes(app *iris.Application) {

@@ -1,4 +1,4 @@
-module gitlab.scustartup.com/hnqc/auto
+module auto
 
 go 1.13
 

@@ -1,7 +1,9 @@
 package drone
 
 import (
+	autoConfig "auto/config"
 	"context"
+	"errors"
 	"github.com/drone/drone-go/drone"
 	"github.com/drone/drone-go/plugin/config"
 	_ "github.com/joho/godotenv/autoload"
@@ -11,38 +13,31 @@ import (
 	"net/http"
 )
 
-const defaultPipeline = `
-`
-
 type droneExPlugin struct {
 }
 
+//根据项目空间、项目文件结构获取相应的默认配置文件
 func (p *droneExPlugin) Find(ctx context.Context, req *config.Request) (*drone.Config, error) {
-	//根据项目空间、项目文件结构获取相应的默认配置文件
-	if req.Repo.Namespace == "hnqc" {
-		return &drone.Config{
-			Data: defaultPipeline,
-		}, nil
+	namespaces := autoConfig.Config().Gitlab.Namespace
+	if namespaces == nil {
+		logrus.Debug("未配置gitlab namespace")
+		return nil, nil
+	}
+	for _, namespace := range namespaces {
+		if req.Repo.Namespace == namespace {
+			data, err := getYml(req.Repo.Slug, autoConfig.Config().Drone.YmlDir)
+			return &drone.Config{
+				Data: data,
+			}, err
+		}
 	}
 	return nil, nil
 }
 
-type Spec struct {
-	Secret string `envconfig:"DRONE_SECRET"`
-}
-
-var spec = new(Spec)
 var handler http.Handler
 
 func init() {
-	err := envconfig.Process("", spec)
-	if err != nil {
-		logrus.Fatal(err)
-	}
-	if spec.Secret == "" {
-		logrus.Fatalln("missing secret key")
-	}
-	handler = config.Handler(&droneExPlugin{}, spec.Secret, logrus.StandardLogger())
+	handler = config.Handler(&droneExPlugin{}, autoConfig.Config().Drone.Secret, logrus.StandardLogger())
 }
 
 //Configuration extension
