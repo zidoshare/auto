@@ -1,0 +1,9 @@
+[server]
+listen=":8003"
+debug=true
+[drone]
+secret="xxx"
+yml_dir="dir"
+[gitlab]
+host="http://gitlab.example.com"
+access_token="token"

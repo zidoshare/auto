@@ -3,14 +3,13 @@ package drone
 import (
 	autoConfig "auto/config"
 	"context"
-	"errors"
+	"net/http"
+
 	"github.com/drone/drone-go/drone"
 	"github.com/drone/drone-go/plugin/config"
 	_ "github.com/joho/godotenv/autoload"
-	"github.com/kataras/iris"
-	"github.com/kelseyhightower/envconfig"
+	"github.com/kataras/iris/v12"
 	"github.com/sirupsen/logrus"
-	"net/http"
 )
 
 type droneExPlugin struct {

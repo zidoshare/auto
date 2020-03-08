@@ -3,10 +3,11 @@ package main
 import (
 	"auto/config"
 	"context"
+	"time"
+
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/middleware/logger"
 	"github.com/kataras/iris/v12/middleware/recover"
-	"time"
 )
 
 func main() {
@@ -20,5 +21,5 @@ func main() {
 		defer cancel()
 		app.Shutdown(ctx)
 	})
-	app.Run(iris.Addr(config.Config().Server.Port), iris.WithoutServerError(iris.ErrServerClosed))
+	app.Run(iris.Addr(config.Config().Server.Listen), iris.WithoutServerError(iris.ErrServerClosed))
 }

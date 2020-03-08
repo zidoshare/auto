@@ -4,11 +4,12 @@ import (
 	"auto/gitlab"
 	"errors"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 func loadConfigFilePaths(configDir string) (map[string]string, error) {

@@ -64,3 +64,5 @@
 ## 开发
 
 golang环境：`>= go v1.12`
+
+格式化：请使用go-imports进行格式化(不要使用go-fmt)

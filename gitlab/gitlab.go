@@ -5,10 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 var client = &http.Client{}
