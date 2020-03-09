@@ -20,6 +20,18 @@ type FileNode struct {
 	WebUrl string `json:"webUrl"`
 }
 
+func FileNames(fullpath string) ([]string, error) {
+	nodes, err := Files(fullpath)
+	if err != nil {
+		return nil, err
+	}
+	var result []string
+	for node := range nodes {
+		result = append(result, node.Name)
+	}
+	return result
+}
+
 //仅查询根目录下所有文件（不包括目录）
 func Files(fullpath string) ([]FileNode, error) {
 	var filesQL = `{"query":"query {
