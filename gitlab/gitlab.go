@@ -26,10 +26,10 @@ func FileNames(fullpath string) ([]string, error) {
 		return nil, err
 	}
 	var result []string
-	for node := range nodes {
+	for _, node := range nodes {
 		result = append(result, node.Name)
 	}
-	return result
+	return result, nil
 }
 
 //仅查询根目录下所有文件（不包括目录）
