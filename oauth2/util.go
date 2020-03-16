@@ -4,38 +4,32 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
-	"time"
+
+	"github.com/kataras/iris/v12"
 )
 
 const cookieName = "_oauth_state"
 
-func createState(w http.ResponseWriter) string {
+func createState(ctx iris.Context) string {
 	cookie := &http.Cookie{
 		Name:   cookieName,
 		Value:  random(),
 		MaxAge: 1800,
 	}
-	http.SetCookie(w, cookie)
+	ctx.SetCookie(cookie)
 	return cookie.Value
 }
 
-func validateState(r *http.Request, state string) error {
-	cookie, err := r.Cookie(cookieName)
-	if err != nil {
-		return err
-	}
-	if state != cookie.Value {
+func validateState(ctx iris.Context, state string) error {
+	cookie := ctx.GetCookie(cookieName)
+	if state != cookie {
 		return ErrState
 	}
 	return nil
 }
 
-func deleteState(w http.ResponseWriter) {
-	http.SetCookie(w, &http.Cookie{
-		Name:    cookieName,
-		MaxAge:  -1,
-		Expires: time.Unix(0, 0),
-	})
+func deleteState(ctx iris.Context) {
+	ctx.RemoveCookie(cookieName)
 }
 
 func random() string {

@@ -12,7 +12,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var client = &http.Client{}
+type ApiConfig struct {
+	Server string
+	Client *http.Client
+}
 
 type FileNode struct {
 	Name   string `json:"name"`
@@ -20,8 +23,8 @@ type FileNode struct {
 	WebUrl string `json:"webUrl"`
 }
 
-func FileNames(fullpath string) ([]string, error) {
-	nodes, err := Files(fullpath)
+func (c *ApiConfig) FileNames(fullPath string) ([]string, error) {
+	nodes, err := c.Files(fullPath)
 	if err != nil {
 		return nil, err
 	}
@@ -33,9 +36,9 @@ func FileNames(fullpath string) ([]string, error) {
 }
 
 //仅查询根目录下所有文件（不包括目录）
-func Files(fullpath string) ([]FileNode, error) {
+func (c *ApiConfig) Files(fullPath string) ([]FileNode, error) {
 	var filesQL = `{"query":"query {
-  project(fullPath:` + fullpath + `) {
+  project(fullPath:` + fullPath + `) {
     id
     name
     repository{
@@ -43,8 +46,8 @@ func Files(fullpath string) ([]FileNode, error) {
         blobs{
           nodes{
             name
-						path
-						webUrl
+			path
+			webUrl
           }
         }
       }
@@ -58,7 +61,7 @@ func Files(fullpath string) ([]FileNode, error) {
 	}
 	req.Header["Authorization"] = []string{"Bearer " + config.Config().Gitlab.AccessToken}
 	req.Header["Content-Type"] = []string{"application/json"}
-	resp, err := client.Do(req)
+	resp, err := c.Client.Do(req)
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("cannot get files from %s:%s", url, err))
 	}

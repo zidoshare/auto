@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"sync"
+	"github.com/kataras/iris/v12"
 
 	"github.com/drone/drone-go/drone"
 	"github.com/drone/drone-go/plugin/config"
@@ -21,6 +21,7 @@ import (
 )
 
 type droneExPlugin struct {
+	gitlabConfig gitlab.ApiConfig
 }
 
 //getYml 根据项目和配置目录匹配相关的配置文件
@@ -48,17 +49,19 @@ func GetYmlByFileNames(fileNames []string, configDir string) (string, error) {
 		logs += "}"
 		logrus.Debug(logs)
 	}
-	var resultConf []string
+	resultConf := make([]string, 0)
 	for _, name := range fileNames {
 		if v, ok := configs[name]; ok {
 			logrus.Debugf("匹配:%s -> %s", name, v)
 			resultConf = append(resultConf, v)
 		}
 	}
-	if len(resultConf) > 1 {
-		return "", errors.New(fmt.Sprintf("仓库与配置标识文件匹配到多个配置文件:%v", resultConf))
-	} else if len(resultConf) < 1 {
-		return "", errors.New(fmt.Sprintf("仓库与配置标识文件未匹配到任何配置文件"))
+	if l := len(resultConf); l != 1 {
+		if l > 1 {
+			return "", errors.New(fmt.Sprintf("仓库与配置标识文件匹配到多个配置文件:%v", resultConf))
+		} else if l == 0 {
+			return "", errors.New(fmt.Sprintf("仓库与配置标识文件未匹配到任何配置文件"))
+		}
 	}
 	result, err := ioutil.ReadFile(resultConf[0])
 	return string(result), err
@@ -73,7 +76,7 @@ func (p *droneExPlugin) Find(ctx context.Context, req *config.Request) (*drone.C
 	}
 	for _, namespace := range namespaces {
 		if req.Repo.Namespace == namespace {
-			fileNames, err := gitlab.FileNames(req.Repo.Slug)
+			fileNames, err := p.gitlabConfig.FileNames(req.Repo.Slug)
 			if err != nil {
 				return nil, err
 			}
@@ -86,14 +89,47 @@ func (p *droneExPlugin) Find(ctx context.Context, req *config.Request) (*drone.C
 	return nil, nil
 }
 
-var (
-	handler http.Handler
-	once    sync.Once
-)
+type Config struct {
+	ymlDir          string
+	callbackHandler http.Handler
+}
 
-func GetDroneCallbackHandler() http.Handler {
-	once.Do(func() {
-		handler = config.Handler(&droneExPlugin{}, autoConfig.Config().Drone.Secret, logrus.StandardLogger())
-	})
-	return handler
+func New(secret, ymlDir string, gitlabConfig gitlab.ApiConfig) *Config {
+	plugin := &droneExPlugin{
+		gitlabConfig,
+	}
+	return &Config{
+		ymlDir:          ymlDir,
+		callbackHandler: config.Handler(plugin, secret, logrus.StandardLogger()),
+	}
+}
+
+func (c *Config) Yml(ctx iris.Context) {
+	var fileNames []string
+	err := ctx.ReadJSON(&fileNames)
+	if err != nil {
+		ctx.StatusCode(400)
+	}
+	if len(fileNames) == 0 {
+		ctx.JSON(map[string]interface{}{
+			"code": 0,
+			"data": "",
+		})
+		return
+	}
+	data, err := GetYmlByFileNames(fileNames, c.ymlDir)
+	if err != nil {
+		ctx.StatusCode(500)
+		ctx.JSON(map[string]interface{}{
+			"code": 100,
+			"msg":  err.Error(),
+		})
+		return
+	}
+	ctx.StatusCode(200)
+	ctx.Text(data)
+}
+
+func (c *Config) Callback(ctx iris.Context) {
+	c.callbackHandler.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
 }

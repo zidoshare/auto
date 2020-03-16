@@ -3,55 +3,48 @@ package oauth2
 import (
 	"auto/login"
 	"errors"
-	"net/http"
 	"time"
+
+	"github.com/kataras/iris/v12"
 
 	"github.com/sirupsen/logrus"
 )
 
-func Handler(h http.Handler, c *Config) http.Handler {
-	return &handler{next: h, conf: c}
+type Handler struct {
+	Conf *Config
 }
 
-type handler struct {
-	conf *Config
-	next http.Handler
-}
-
-func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	if err := r.FormValue("error"); err != "" {
+func (h *Handler) Handle(ctx iris.Context) {
+	if err := ctx.FormValue("error"); err != "" {
 		logrus.Errorf("oauth:认证错误: %s", err)
-		ctx = login.WithError(ctx, errors.New(err))
-		h.next.ServeHTTP(w, r.WithContext(ctx))
+		login.WithError(ctx, errors.New(err))
+		ctx.Next()
 		return
 	}
 
-	code := r.FormValue("code")
+	code := ctx.FormValue("code")
 	if len(code) == 0 {
-		state := createState(w)
-		http.Redirect(w, r, h.conf.authorizeRedirect(state), 303)
+		state := createState(ctx)
+		ctx.Redirect(h.Conf.authorizeRedirect(state), 303)
 		return
 	}
-	state := r.FormValue("state")
-	deleteState(w)
-	if err := validateState(r, state); err != nil {
+	state := ctx.FormValue("state")
+	deleteState(ctx)
+	if err := validateState(ctx, state); err != nil {
 		logrus.Errorln("oauth: state缺少或已经失效")
-		ctx = login.WithError(ctx, err)
-		h.next.ServeHTTP(w, r.WithContext(ctx))
+		login.WithError(ctx, err)
+		ctx.Next()
 		return
 	}
-	source, err := h.conf.exchange(code, state)
+	source, err := h.Conf.exchange(code, state)
 	if err != nil {
 		logrus.Errorf("oauth: 无法交换code: %s: %s", code, err)
-		ctx = login.WithError(ctx, err)
-		h.next.ServeHTTP(w, r.WithContext(ctx))
+		login.WithError(ctx, err)
+		ctx.Next()
 		return
 	}
 
-	ctx = login.WithToken(ctx, &login.Token{
-
+	login.WithToken(ctx, &login.Token{
 		Access:  source.AccessToken,
 		Refresh: source.RefreshToken,
 		Expires: time.Now().UTC().Add(
@@ -59,5 +52,5 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		),
 	})
 
-	h.next.ServeHTTP(w, r.WithContext(ctx))
+	ctx.Next()
 }

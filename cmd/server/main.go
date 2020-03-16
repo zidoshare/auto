@@ -2,6 +2,7 @@ package main
 
 import (
 	"auto/config"
+	"auto/routes"
 	"context"
 	"time"
 
@@ -15,11 +16,12 @@ func main() {
 	app.Logger().SetLevel("info")
 	app.Use(recover.New())
 	app.Use(logger.New())
+	routes.Routes(app)
 	iris.RegisterOnInterrupt(func() {
 		timeout := 5 * time.Second
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 		app.Shutdown(ctx)
 	})
-	app.Run(iris.Addr(config.Config().Server.Listen), iris.WithoutServerError(iris.ErrServerClosed))
+	app.Run(iris.Addr(config.Config().Server.Addr), iris.WithoutServerError(iris.ErrServerClosed))
 }

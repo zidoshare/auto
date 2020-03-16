@@ -7,7 +7,7 @@ package oauth2
 import "errors"
 
 // ErrState indicates the state is invalid.
-var ErrState = errors.New("Invalid state")
+var ErrState = errors.New("invalid state")
 
 // Error represents a failed authorization request.
 type Error struct {

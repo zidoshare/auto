@@ -1,14 +1,14 @@
 package login
 
 import (
-	"context"
-	"net/http"
 	"time"
+
+	"github.com/kataras/iris/v12"
 )
 
-type Middleware interface {
-	Handler(h http.Handler) http.Handler
-}
+//type Middleware interface {
+//	Handler(h http.Handler) http.Handler
+//}
 
 type Token struct {
 	Access  string
@@ -18,24 +18,29 @@ type Token struct {
 type key int
 
 const (
-	tokenKey key = iota
-	errorKey
+	tokenKey = "KEY_TOKEN"
+	errorKey = "KEY_ERROR"
 )
 
-func WithToken(parent context.Context, token *Token) context.Context {
-	return context.WithValue(parent, tokenKey, token)
+//TODO handle login
+func HandleLogin(ctx iris.Context) {
+
 }
 
-func WithError(parent context.Context, err error) context.Context {
-	return context.WithValue(parent, errorKey, err)
+func WithToken(ctx iris.Context, token *Token) {
+	ctx.Values().Set(tokenKey, token)
 }
 
-func TokenFrom(ctx context.Context) *Token {
-	token, _ := ctx.Value(tokenKey).(*Token)
+func WithError(ctx iris.Context, err error) {
+	ctx.Values().Set(errorKey, err)
+}
+
+func TokenFrom(ctx iris.Context) *Token {
+	token, _ := ctx.Values().Get(tokenKey).(*Token)
 	return token
 }
 
-func ErrorFrom(ctx context.Context) error {
-	err, _ := ctx.Value(errorKey).(error)
+func ErrorFrom(ctx iris.Context) error {
+	err, _ := ctx.Values().Get(errorKey).(error)
 	return err
 }
