@@ -1,7 +1,7 @@
 package oauth2
 
 import (
-	"auto/login"
+	"auto/authentication/core"
 	"errors"
 	"time"
 
@@ -17,7 +17,7 @@ type Handler struct {
 func (h *Handler) Handle(ctx iris.Context) {
 	if err := ctx.FormValue("error"); err != "" {
 		logrus.Errorf("oauth:认证错误: %s", err)
-		login.WithError(ctx, errors.New(err))
+		core.WithError(ctx, errors.New(err))
 		ctx.Next()
 		return
 	}
@@ -32,19 +32,19 @@ func (h *Handler) Handle(ctx iris.Context) {
 	deleteState(ctx)
 	if err := validateState(ctx, state); err != nil {
 		logrus.Errorln("oauth: state缺少或已经失效")
-		login.WithError(ctx, err)
+		core.WithError(ctx, err)
 		ctx.Next()
 		return
 	}
 	source, err := h.Conf.exchange(code, state)
 	if err != nil {
 		logrus.Errorf("oauth: 无法交换code: %s: %s", code, err)
-		login.WithError(ctx, err)
+		core.WithError(ctx, err)
 		ctx.Next()
 		return
 	}
 
-	login.WithToken(ctx, &login.Token{
+	core.WithToken(ctx, &core.Token{
 		Access:  source.AccessToken,
 		Refresh: source.RefreshToken,
 		Expires: time.Now().UTC().Add(

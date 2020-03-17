@@ -8,7 +8,7 @@ import (
 	"github.com/kataras/iris/v12/context"
 )
 
-type Config struct {
+type GitlabClient struct {
 	ClientID     string
 	ClientSecret string
 	RedirectURL  string
@@ -17,7 +17,7 @@ type Config struct {
 	Client       *http.Client
 }
 
-func CreateMiddleware(c *Config) context.Handler {
+func CreateMiddleware(c *GitlabClient) context.Handler {
 	server := normalizeAddress(c.Server)
 	handler := oauth2.Handler{
 		Conf: &oauth2.Config{

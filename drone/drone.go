@@ -1,8 +1,7 @@
 package drone
 
 import (
-	autoConfig "auto/config"
-	"auto/gitlab"
+	"auto/projects"
 	"context"
 	"errors"
 	"fmt"
@@ -12,22 +11,46 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/kataras/iris/v12"
-
 	"github.com/drone/drone-go/drone"
 	"github.com/drone/drone-go/plugin/config"
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/sirupsen/logrus"
 )
 
-type droneExPlugin struct {
-	gitlabConfig gitlab.ApiConfig
+type Config struct {
+	PermittedNameSpaces []string
+	ConfigDir           string
+	ProjectClient       projects.Client
+	GitlabSecret        string
+	Debug               bool
 }
 
-//getYml 根据项目和配置目录匹配相关的配置文件
-func GetYmlByFileNames(fileNames []string, configDir string) (string, error) {
+type Client struct {
+	PermittedNameSpaces []string
+	ConfigDir           string
+	Debug               bool
+	Callback            http.Handler
+}
+
+func NewClient(cfg Config) Client {
+	client := Client{
+		PermittedNameSpaces: cfg.PermittedNameSpaces,
+		ConfigDir:           cfg.ConfigDir,
+		Debug:               cfg.Debug,
+	}
+	plugin := &droneExPlugin{
+		droneClient:         client,
+		permittedNameSpaces: cfg.PermittedNameSpaces,
+		client:              cfg.ProjectClient,
+	}
+	client.Callback = config.Handler(plugin, cfg.GitlabSecret, logrus.StandardLogger())
+	return client
+}
+
+//GetYmlByFileNames 根据项目和配置目录匹配相关的配置文件
+func (c Client) GetYmlByFileNames(fileNames []string) (string, error) {
 	configs := make(map[string]string)
-	if err := filepath.Walk(configDir, func(p string, info os.FileInfo, err error) error {
+	if err := filepath.Walk(c.ConfigDir, func(p string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -38,7 +61,7 @@ func GetYmlByFileNames(fileNames []string, configDir string) (string, error) {
 	}); err != nil {
 		return "", errors.New(fmt.Sprintf("解析配置文件目录(*.drone.yml)发生错误:%s", err))
 	}
-	if autoConfig.Config().Server.Debug {
+	if c.Debug {
 		var logs = "匹配配置标识文件:{"
 		for k, v := range configs {
 			logs += fmt.Sprintf("%s->%s,", k, v)
@@ -67,69 +90,29 @@ func GetYmlByFileNames(fileNames []string, configDir string) (string, error) {
 	return string(result), err
 }
 
-//根据项目空间、项目文件结构获取相应的默认配置文件
-func (p *droneExPlugin) Find(ctx context.Context, req *config.Request) (*drone.Config, error) {
-	namespaces := autoConfig.Config().Gitlab.Namespace
-	if namespaces == nil {
+type droneExPlugin struct {
+	droneClient         Client
+	permittedNameSpaces []string
+	client              projects.Client
+}
+
+//Find 根据项目空间、项目文件结构获取相应的默认配置文件
+func (p *droneExPlugin) Find(_ context.Context, req *config.Request) (*drone.Config, error) {
+	if p.permittedNameSpaces == nil {
 		logrus.Debug("未配置gitlab namespace")
 		return nil, nil
 	}
-	for _, namespace := range namespaces {
+	for _, namespace := range p.permittedNameSpaces {
 		if req.Repo.Namespace == namespace {
-			fileNames, err := p.gitlabConfig.FileNames(req.Repo.Slug)
+			fileNames, err := projects.FileNames(p.client, req.Repo.Slug)
 			if err != nil {
 				return nil, err
 			}
-			data, err := GetYmlByFileNames(fileNames, autoConfig.Config().Drone.YmlDir)
+			data, err := p.droneClient.GetYmlByFileNames(fileNames)
 			return &drone.Config{
 				Data: data,
 			}, err
 		}
 	}
 	return nil, nil
-}
-
-type Config struct {
-	ymlDir          string
-	callbackHandler http.Handler
-}
-
-func New(secret, ymlDir string, gitlabConfig gitlab.ApiConfig) *Config {
-	plugin := &droneExPlugin{
-		gitlabConfig,
-	}
-	return &Config{
-		ymlDir:          ymlDir,
-		callbackHandler: config.Handler(plugin, secret, logrus.StandardLogger()),
-	}
-}
-
-func (c *Config) Yml(ctx iris.Context) {
-	var fileNames []string
-	err := ctx.ReadJSON(&fileNames)
-	if err != nil {
-		ctx.StatusCode(400)
-	}
-	if len(fileNames) == 0 {
-		ctx.JSON(map[string]interface{}{
-			"code": 0,
-			"data": "",
-		})
-		return
-	}
-	data, err := GetYmlByFileNames(fileNames, c.ymlDir)
-	if err != nil {
-		ctx.StatusCode(500)
-		ctx.JSON(map[string]interface{}{
-			"code": 100,
-			"msg":  err.Error(),
-		})
-		return
-	}
-	ctx.StatusCode(200)
-	ctx.Text(data)
-}
-
-func (c *Config) Callback(ctx iris.Context) {
-	c.callbackHandler.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
 }
